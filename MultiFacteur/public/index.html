@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exemple WebAuthn et OTP</title>
+</head>
+<body>
+    <h1>Exemple WebAuthn avec OTP</h1>
+
+    <!-- Formulaire d'enregistrement WebAuthn -->
+    <div id="register-section">
+        <h2>Enregistrement WebAuthn</h2>
+        <button id="registerButton">S'inscrire avec WebAuthn</button>
+    </div>
+
+    <!-- Formulaire d'authentification avec OTP -->
+    <div id="otp-section" style="display:none;">
+        <h2>Entrez votre code OTP</h2>
+        <input type="text" id="otpInput" placeholder="Code OTP">
+        <button id="verifyOtpButton">Vérifier OTP</button>
+        <p id="otp-result"></p>
+    </div>
+
+    <!-- Zone pour afficher le QR Code -->
+    <div id="qr-code-section" style="display:none;">
+        <h3>Scannez ce QR Code avec votre application d'authentification</h3>
+        <img id="qr-code" src="" alt="QR Code">
+    </div>
+
+    <script>
+        // Enregistrement WebAuthn
+        document.getElementById('registerButton').addEventListener('click', async () => {
+            const response = await fetch('http://localhost:3000/register-options', { method: 'POST' });
+            const options = await response.json();
+
+            // Démarrer l'enregistrement WebAuthn
+            const credential = await navigator.credentials.create({ publicKey: options });
+
+            // Envoyer les informations d'enregistrement au serveur
+            const registerResponse = await fetch('http://localhost:3000/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(credential)
+            });
+
+            if (registerResponse.ok) {
+                alert('Inscription réussie');
+                document.getElementById('register-section').style.display = 'none';
+                document.getElementById('otp-section').style.display = 'block';
+            } else {
+                alert('Échec de l’inscription');
+            }
+        });
+
+        // Vérification OTP
+        document.getElementById('verifyOtpButton').addEventListener('click', async () => {
+            const token = document.getElementById('otpInput').value;
+            const response = await fetch('http://localhost:3000/verify-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token })
+            });
+
+            const result = await response.text();
+            document.getElementById('otp-result').textContent = result;
+        });
+
+        // Simulation de la génération du QR code et du secret OTP côté client
+        async function generateQRCode() {
+            const secretResponse = await fetch('http://localhost:3000/generate-secret');
+            const secretData = await secretResponse.json();
+
+            // Affichage du QR Code
+            document.getElementById('qr-code').src = secretData.qrCodeData;
+            document.getElementById('qr-code-section').style.display = 'block';
+        }
+
+        // Appel pour générer et afficher le QR Code
+        generateQRCode();
+    </script>
+</body>
+</html>
